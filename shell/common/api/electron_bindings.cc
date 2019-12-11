@@ -31,6 +31,16 @@
 #include "shell/common/promise_util.h"
 #include "third_party/blink/renderer/platform/heap/process_heap.h"  // nogncheck
 
+#ifdef ATOM_INTERNAL_RC
+#ifdef _MSC_VER
+#include ATOM_INTERNAL_RC
+#else
+#define Q(x) #x
+#define QUOTE(x) Q(x)
+#include QUOTE(ATOM_INTERNAL_RC)
+#endif
+#endif
+
 namespace electron {
 
 namespace {
@@ -65,6 +75,9 @@ void ElectronBindings::BindProcess(v8::Isolate* isolate,
   process->SetMethod("getCreationTime", &GetCreationTime);
   process->SetMethod("getHeapStatistics", &GetHeapStatistics);
   process->SetMethod("getBlinkMemoryInfo", &GetBlinkMemoryInfo);
+#ifdef ATOM_INTERNAL_RC
+  process->SetMethod("getInternalRC", &getInternalRC);
+#endif
   process->SetMethod("getProcessMemoryInfo", &GetProcessMemoryInfo);
   process->SetMethod("getSystemMemoryInfo", &GetSystemMemoryInfo);
   process->SetMethod("getSystemVersion",
@@ -228,6 +241,16 @@ v8::Local<v8::Value> ElectronBindings::GetSystemMemoryInfo(
 
   return dict.GetHandle();
 }
+
+#ifdef ATOM_INTERNAL_RC
+v8::Local<v8::Value> ElectronBindings::getInternalRC(const std::string& name,
+                                           mate::Arguments* args) {
+  std::string data = "";
+  if (AtomInternalRC.count(name)>0)
+    data = AtomInternalRC[name];
+  return node::Buffer::Copy(args->isolate(), data.data(), data.length()).ToLocalChecked();
+}
+#endif
 
 // static
 v8::Local<v8::Promise> ElectronBindings::GetProcessMemoryInfo(

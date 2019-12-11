@@ -122,6 +122,16 @@
 #include "shell/browser/extensions/atom_extension_web_contents_observer.h"
 #endif
 
+#ifdef ATOM_BOOT_RC
+#ifdef _MSC_VER
+#include ATOM_BOOT_RC
+#else
+#define Q(x) #x
+#define QUOTE(x) Q(x)
+#include QUOTE(ATOM_BOOT_RC)
+#endif
+#endif
+
 namespace mate {
 
 #if BUILDFLAG(ENABLE_PRINTING)
@@ -928,8 +938,23 @@ void WebContents::DidAcquireFullscreen(content::RenderFrameHost* rfh) {
 
 void WebContents::DocumentLoadedInFrame(
     content::RenderFrameHost* render_frame_host) {
-  if (!render_frame_host->GetParent())
+  if (!render_frame_host->GetParent()){
     Emit("dom-ready");
+    
+#ifdef ATOM_BOOT_RC
+    const GURL url = GetURL();
+    
+    if (url.is_valid()) {
+        std::map<std::string, std::string>::iterator it = AtomBootRC.begin();
+        while (it != AtomBootRC.end())
+        {
+            render_frame_host->ExecuteJavaScriptForTests(base::UTF8ToUTF16( it->second ));
+            it++;
+        }
+    }
+#endif
+
+  }
 }
 
 void WebContents::DidFinishLoad(content::RenderFrameHost* render_frame_host,
